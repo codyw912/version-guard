@@ -11,20 +11,8 @@ interface PluginContext {
 	worktree: string;
 }
 
-// Tool execution input from tool.execute.after hook
-interface ToolExecutionInput {
-	tool: string;
-	args: {
-		filePath?: string;
-		file_path?: string;
-		path?: string;
-		content?: string;
-	};
-	sessionID?: string;
-}
-
 type PluginHooks = {
-	"tool.execute.after"?: (input: ToolExecutionInput) => Promise<void>;
+	"tool.execute.after"?: (input: unknown) => Promise<void>;
 };
 
 type Plugin = (context: PluginContext) => Promise<PluginHooks>;
@@ -32,23 +20,47 @@ type Plugin = (context: PluginContext) => Promise<PluginHooks>;
 // Singleton cache shared across all hook invocations
 let cache: VersionCache | null = null;
 
+// Helper to safely extract nested properties
+function getNestedProp(obj: unknown, ...keys: string[]): unknown {
+	let current = obj;
+	for (const key of keys) {
+		if (current == null || typeof current !== "object") return undefined;
+		current = (current as Record<string, unknown>)[key];
+	}
+	return current;
+}
+
 export const VersionGuard: Plugin = async (_ctx) => {
 	const config = await loadConfig();
 	cache = new VersionCache(config.cache.ttlMinutes);
 
 	return {
 		"tool.execute.after": async (input) => {
-			// Only check write/edit operations
-			if (input.tool !== "edit" && input.tool !== "write") return;
+			// Safely extract tool name - could be input.tool or input.name
+			const toolName = String(
+				getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? ""
+			).toLowerCase();
 
-			const filePath = input.args.filePath ?? input.args.file_path ?? input.args.path;
-			if (!filePath) return;
+			// Only check write/edit operations
+			if (toolName !== "edit" && toolName !== "write") return;
+
+			// Try multiple paths for filePath
+			const filePath =
+				getNestedProp(input, "args", "filePath") ??
+				getNestedProp(input, "args", "file_path") ??
+				getNestedProp(input, "args", "path") ??
+				getNestedProp(input, "filePath") ??
+				getNestedProp(input, "file_path") ??
+				getNestedProp(input, "path");
+
+			if (typeof filePath !== "string" || !filePath) return;
 			if (!shouldCheck(filePath, config)) return;
 
-			// For write: content is in args.content
-			// For edit: read the file after the edit completed
-			let content = input.args.content;
-			if (!content) {
+			// Try to get content from input, otherwise read the file
+			let content =
+				getNestedProp(input, "args", "content") ?? getNestedProp(input, "content");
+
+			if (typeof content !== "string" || !content) {
 				try {
 					content = readFileSync(filePath, "utf-8");
 				} catch {
@@ -56,10 +68,9 @@ export const VersionGuard: Plugin = async (_ctx) => {
 				}
 			}
 
-			const warnings = await checkVersions(filePath, content, config, cache!);
+			const warnings = await checkVersions(filePath, content as string, config, cache!);
 
 			if (warnings.length > 0) {
-				// Log warning to OpenCode's output
 				console.log(formatWarnings(warnings));
 			}
 		},
