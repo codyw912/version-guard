@@ -1,0 +1,28 @@
+{
+	"name": "opencode-version-guard",
+	"version": "0.1.0",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"scripts": {
+		"build": "bun build ./src/index.ts --outdir ./dist --target node",
+		"dev": "bun build ./src/index.ts --outdir ./dist --target node --watch"
+	},
+	"dependencies": {
+		"@version-guard/core": "workspace:*"
+	},
+	"peerDependencies": {
+		"@opencode/plugin": ">=0.1.0"
+	},
+	"peerDependenciesMeta": {
+		"@opencode/plugin": {
+			"optional": true
+		}
+	}
+}

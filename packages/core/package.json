@@ -1,0 +1,23 @@
+{
+	"name": "@version-guard/core",
+	"version": "0.1.0",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"scripts": {
+		"build": "bun build ./src/index.ts --outdir ./dist --target node",
+		"dev": "bun build ./src/index.ts --outdir ./dist --target node --watch"
+	},
+	"dependencies": {
+		"semver": "^7.6.0"
+	},
+	"devDependencies": {
+		"@types/semver": "^7.5.0"
+	}
+}

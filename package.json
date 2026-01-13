@@ -1,0 +1,18 @@
+{
+	"name": "version-guard",
+	"private": true,
+	"type": "module",
+	"workspaces": ["packages/core", "packages/cli", "packages/adapters/*"],
+	"scripts": {
+		"build": "bun run --filter '@version-guard/core' build && bun run --filter '!@version-guard/core' build",
+		"dev": "bun run --filter '*' dev",
+		"test": "bun test",
+		"lint": "bunx @biomejs/biome check .",
+		"format": "bunx @biomejs/biome format --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.0",
+		"@types/bun": "^1.1.0",
+		"typescript": "^5.7.0"
+	}
+}
