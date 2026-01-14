@@ -1,7 +1,15 @@
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import type { Plugin } from "@opencode-ai/plugin";
 import { VersionCache, checkVersions, formatWarnings } from "@version-guard/core";
 import { loadConfig, shouldCheck } from "./config";
+
+// Debug log file
+const DEBUG_LOG = "/tmp/version-guard-debug.log";
+
+function debugLog(msg: string) {
+	const timestamp = new Date().toISOString();
+	appendFileSync(DEBUG_LOG, `[${timestamp}] ${msg}\n`);
+}
 
 // Singleton cache shared across all hook invocations
 let cache: VersionCache | null = null;
@@ -31,8 +39,8 @@ export const VersionGuard: Plugin = async (_ctx) => {
 		"tool.execute.after": async (input: unknown, output: ToolOutput) => {
 			try {
 				// DEBUG: Log both input and output structures
-				console.error("[version-guard] input:", JSON.stringify(input, null, 2).slice(0, 800));
-				console.error("[version-guard] output:", JSON.stringify(output, null, 2).slice(0, 800));
+				debugLog("input: " + JSON.stringify(input, null, 2));
+				debugLog("output: " + JSON.stringify(output, null, 2));
 
 				// Safely extract tool name - could be input.tool or input.name
 				const toolName = String(
