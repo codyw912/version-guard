@@ -17,38 +17,29 @@ function getNestedProp(obj: unknown, ...keys: string[]): unknown {
 }
 
 export const VersionGuard: Plugin = async ({ client }) => {
-	// DEBUG: Log plugin initialization
-	console.error("[version-guard] Plugin initializing...");
-
 	const config = await loadConfig();
 	cache = new VersionCache(config.cache.ttlMinutes);
 
-	console.error(
-		"[version-guard] Plugin loaded successfully, config:",
-		JSON.stringify(config, null, 2),
-	);
+	// DEBUG: Log plugin initialization via structured logging
+	await client.app.log({
+		service: "version-guard",
+		level: "debug",
+		message: `Plugin loaded, config: ${JSON.stringify(config)}`,
+	});
 
 	return {
-		// DEBUG: Catch all events to see what's firing
-		event: async ({ event }: { event: { type: string } }) => {
-			console.error(`[version-guard] event fired: ${event.type}`);
-		},
-
-		"tool.execute.after": async (input, output) => {
-			// DEBUG: Log raw input structure
-			console.error(
-				"[version-guard] tool.execute.after fired, input:",
-				JSON.stringify(input, null, 2),
-			);
-			console.error(
-				"[version-guard] tool.execute.after fired, output:",
-				JSON.stringify(output, null, 2),
-			);
-
+		"tool.execute.after": async (input, _output) => {
 			// Safely extract tool name - could be input.tool or input.name
 			const toolName = String(
 				getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? "",
 			).toLowerCase();
+
+			// DEBUG: Log every tool execution
+			await client.app.log({
+				service: "version-guard",
+				level: "debug",
+				message: `tool.execute.after: ${toolName}`,
+			});
 
 			// Only check write/edit operations
 			if (toolName !== "edit" && toolName !== "write") return;
