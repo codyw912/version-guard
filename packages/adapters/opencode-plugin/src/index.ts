@@ -29,14 +29,26 @@ export const VersionGuard: Plugin = async ({ client }) => {
 	);
 
 	return {
-		"tool.execute.after": async (input) => {
+		// DEBUG: Catch all events to see what's firing
+		event: async ({ event }: { event: { type: string } }) => {
+			console.error(`[version-guard] event fired: ${event.type}`);
+		},
+
+		"tool.execute.after": async (input, output) => {
+			// DEBUG: Log raw input structure
+			console.error(
+				"[version-guard] tool.execute.after fired, input:",
+				JSON.stringify(input, null, 2),
+			);
+			console.error(
+				"[version-guard] tool.execute.after fired, output:",
+				JSON.stringify(output, null, 2),
+			);
+
 			// Safely extract tool name - could be input.tool or input.name
 			const toolName = String(
 				getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? "",
 			).toLowerCase();
-
-			// DEBUG: Log every tool execution
-			console.error(`[version-guard] tool.execute.after fired: ${toolName}`);
 
 			// Only check write/edit operations
 			if (toolName !== "edit" && toolName !== "write") return;
