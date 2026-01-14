@@ -17,8 +17,16 @@ function getNestedProp(obj: unknown, ...keys: string[]): unknown {
 }
 
 export const VersionGuard: Plugin = async ({ client }) => {
+	// DEBUG: Log plugin initialization
+	console.error("[version-guard] Plugin initializing...");
+
 	const config = await loadConfig();
 	cache = new VersionCache(config.cache.ttlMinutes);
+
+	console.error(
+		"[version-guard] Plugin loaded successfully, config:",
+		JSON.stringify(config, null, 2),
+	);
 
 	return {
 		"tool.execute.after": async (input) => {
@@ -26,6 +34,9 @@ export const VersionGuard: Plugin = async ({ client }) => {
 			const toolName = String(
 				getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? "",
 			).toLowerCase();
+
+			// DEBUG: Log every tool execution
+			console.error(`[version-guard] tool.execute.after fired: ${toolName}`);
 
 			// Only check write/edit operations
 			if (toolName !== "edit" && toolName !== "write") return;
