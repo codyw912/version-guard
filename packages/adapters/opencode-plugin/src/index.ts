@@ -16,14 +16,19 @@ function getNestedProp(obj: unknown, ...keys: string[]): unknown {
 	return current;
 }
 
-export const VersionGuard: Plugin = async ({ client }) => {
+// Output structure from tool.execute.after hook
+interface ToolOutput {
+	title: string;
+	output: string;
+	metadata: unknown;
+}
+
+export const VersionGuard: Plugin = async (_ctx) => {
 	const config = await loadConfig();
 	cache = new VersionCache(config.cache.ttlMinutes);
 
-	// Note: Don't call client.app.log() during plugin init - only in hooks
-
 	return {
-		"tool.execute.after": async (input, _output) => {
+		"tool.execute.after": async (input: unknown, output: ToolOutput) => {
 			// Safely extract tool name - could be input.tool or input.name
 			const toolName = String(
 				getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? "",
@@ -58,11 +63,8 @@ export const VersionGuard: Plugin = async ({ client }) => {
 			const warnings = await checkVersions(filePath, content as string, config, cache!);
 
 			if (warnings.length > 0) {
-				await client.app.log({
-					service: "version-guard",
-					level: "warn",
-					message: formatWarnings(warnings),
-				});
+				// Append to tool output (same pattern as LSP diagnostics)
+				output.output += `\n\n${formatWarnings(warnings)}`;
 			}
 		},
 	};
