@@ -1,21 +1,7 @@
 import { readFileSync } from "node:fs";
+import type { Plugin } from "@opencode-ai/plugin";
 import { VersionCache, checkVersions, formatWarnings } from "@version-guard/core";
 import { loadConfig, shouldCheck } from "./config";
-
-// OpenCode plugin context
-interface PluginContext {
-	project: unknown;
-	client: unknown;
-	$: unknown;
-	directory: string;
-	worktree: string;
-}
-
-type PluginHooks = {
-	"tool.execute.after"?: (input: unknown) => Promise<void>;
-};
-
-type Plugin = (context: PluginContext) => Promise<PluginHooks>;
 
 // Singleton cache shared across all hook invocations
 let cache: VersionCache | null = null;
@@ -30,7 +16,7 @@ function getNestedProp(obj: unknown, ...keys: string[]): unknown {
 	return current;
 }
 
-export const VersionGuard: Plugin = async (_ctx) => {
+export const VersionGuard: Plugin = async ({ client }) => {
 	const config = await loadConfig();
 	cache = new VersionCache(config.cache.ttlMinutes);
 
@@ -38,7 +24,7 @@ export const VersionGuard: Plugin = async (_ctx) => {
 		"tool.execute.after": async (input) => {
 			// Safely extract tool name - could be input.tool or input.name
 			const toolName = String(
-				getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? ""
+				getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? "",
 			).toLowerCase();
 
 			// Only check write/edit operations
@@ -57,8 +43,7 @@ export const VersionGuard: Plugin = async (_ctx) => {
 			if (!shouldCheck(filePath, config)) return;
 
 			// Try to get content from input, otherwise read the file
-			let content =
-				getNestedProp(input, "args", "content") ?? getNestedProp(input, "content");
+			let content = getNestedProp(input, "args", "content") ?? getNestedProp(input, "content");
 
 			if (typeof content !== "string" || !content) {
 				try {
@@ -71,7 +56,11 @@ export const VersionGuard: Plugin = async (_ctx) => {
 			const warnings = await checkVersions(filePath, content as string, config, cache!);
 
 			if (warnings.length > 0) {
-				console.log(formatWarnings(warnings));
+				await client.app.log({
+					service: "version-guard",
+					level: "warn",
+					message: formatWarnings(warnings),
+				});
 			}
 		},
 	};

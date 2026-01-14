@@ -18,10 +18,10 @@
 		"@version-guard/core": "workspace:*"
 	},
 	"peerDependencies": {
-		"@opencode/plugin": ">=0.1.0"
+		"@opencode-ai/plugin": ">=0.1.0"
 	},
 	"peerDependenciesMeta": {
-		"@opencode/plugin": {
+		"@opencode-ai/plugin": {
 			"optional": true
 		}
 	}
