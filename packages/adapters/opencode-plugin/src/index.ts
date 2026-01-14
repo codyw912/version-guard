@@ -30,11 +30,9 @@ export const VersionGuard: Plugin = async (_ctx) => {
 	return {
 		"tool.execute.after": async (input: unknown, output: ToolOutput) => {
 			try {
-				// DEBUG: Log that hook fired
-				console.error(
-					"[version-guard] hook fired, input:",
-					JSON.stringify(input, null, 2).slice(0, 500),
-				);
+				// DEBUG: Log both input and output structures
+				console.error("[version-guard] input:", JSON.stringify(input, null, 2).slice(0, 800));
+				console.error("[version-guard] output:", JSON.stringify(output, null, 2).slice(0, 800));
 
 				// Safely extract tool name - could be input.tool or input.name
 				const toolName = String(
@@ -49,14 +47,17 @@ export const VersionGuard: Plugin = async (_ctx) => {
 					return;
 				}
 
-				// Try multiple paths for filePath
+				// Try multiple paths for filePath - check BOTH input and output
 				const filePath =
+					// Check input
 					getNestedProp(input, "args", "filePath") ??
-					getNestedProp(input, "args", "file_path") ??
-					getNestedProp(input, "args", "path") ??
 					getNestedProp(input, "filePath") ??
-					getNestedProp(input, "file_path") ??
-					getNestedProp(input, "path");
+					// Check output.metadata (where args might be stored after execution)
+					getNestedProp(output, "metadata", "filePath") ??
+					getNestedProp(output, "metadata", "args", "filePath") ??
+					// Check output directly
+					getNestedProp(output, "filePath") ??
+					getNestedProp(output, "args", "filePath");
 
 				console.error(`[version-guard] filePath: ${filePath}`);
 
