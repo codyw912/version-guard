@@ -29,42 +29,82 @@ export const VersionGuard: Plugin = async (_ctx) => {
 
 	return {
 		"tool.execute.after": async (input: unknown, output: ToolOutput) => {
-			// Safely extract tool name - could be input.tool or input.name
-			const toolName = String(
-				getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? "",
-			).toLowerCase();
+			try {
+				// DEBUG: Log that hook fired
+				console.error(
+					"[version-guard] hook fired, input:",
+					JSON.stringify(input, null, 2).slice(0, 500),
+				);
 
-			// Only check write/edit operations
-			if (toolName !== "edit" && toolName !== "write") return;
+				// Safely extract tool name - could be input.tool or input.name
+				const toolName = String(
+					getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? "",
+				).toLowerCase();
 
-			// Try multiple paths for filePath
-			const filePath =
-				getNestedProp(input, "args", "filePath") ??
-				getNestedProp(input, "args", "file_path") ??
-				getNestedProp(input, "args", "path") ??
-				getNestedProp(input, "filePath") ??
-				getNestedProp(input, "file_path") ??
-				getNestedProp(input, "path");
+				console.error(`[version-guard] toolName: ${toolName}`);
 
-			if (typeof filePath !== "string" || !filePath) return;
-			if (!shouldCheck(filePath, config)) return;
-
-			// Try to get content from input, otherwise read the file
-			let content = getNestedProp(input, "args", "content") ?? getNestedProp(input, "content");
-
-			if (typeof content !== "string" || !content) {
-				try {
-					content = readFileSync(filePath, "utf-8");
-				} catch {
-					return; // File doesn't exist or can't be read
+				// Only check write/edit operations
+				if (toolName !== "edit" && toolName !== "write") {
+					console.error("[version-guard] skipping - not edit/write");
+					return;
 				}
-			}
 
-			const warnings = await checkVersions(filePath, content as string, config, cache!);
+				// Try multiple paths for filePath
+				const filePath =
+					getNestedProp(input, "args", "filePath") ??
+					getNestedProp(input, "args", "file_path") ??
+					getNestedProp(input, "args", "path") ??
+					getNestedProp(input, "filePath") ??
+					getNestedProp(input, "file_path") ??
+					getNestedProp(input, "path");
 
-			if (warnings.length > 0) {
-				// Append to tool output (same pattern as LSP diagnostics)
-				output.output += `\n\n${formatWarnings(warnings)}`;
+				console.error(`[version-guard] filePath: ${filePath}`);
+
+				if (typeof filePath !== "string" || !filePath) {
+					console.error("[version-guard] skipping - no filePath");
+					return;
+				}
+
+				const shouldCheckFile = shouldCheck(filePath, config);
+				console.error(`[version-guard] shouldCheck(${filePath}): ${shouldCheckFile}`);
+
+				if (!shouldCheckFile) {
+					console.error("[version-guard] skipping - shouldCheck returned false");
+					return;
+				}
+
+				// Try to get content from input, otherwise read the file
+				let content = getNestedProp(input, "args", "content") ?? getNestedProp(input, "content");
+
+				if (typeof content !== "string" || !content) {
+					try {
+						content = readFileSync(filePath, "utf-8");
+						console.error(
+							`[version-guard] read file content, length: ${(content as string).length}`,
+						);
+					} catch (err) {
+						console.error(`[version-guard] failed to read file: ${err}`);
+						return;
+					}
+				} else {
+					console.error(
+						`[version-guard] got content from input, length: ${(content as string).length}`,
+					);
+				}
+
+				console.error("[version-guard] calling checkVersions...");
+				const warnings = await checkVersions(filePath, content as string, config, cache!);
+				console.error(`[version-guard] warnings count: ${warnings.length}`);
+
+				if (warnings.length > 0) {
+					const formatted = formatWarnings(warnings);
+					console.error(`[version-guard] formatted warnings: ${formatted}`);
+					// Append to tool output (same pattern as LSP diagnostics)
+					output.output += `\n\n${formatted}`;
+					console.error("[version-guard] appended to output.output");
+				}
+			} catch (err) {
+				console.error(`[version-guard] ERROR: ${err}`);
 			}
 		},
 	};
