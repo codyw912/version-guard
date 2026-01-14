@@ -20,12 +20,7 @@ export const VersionGuard: Plugin = async ({ client }) => {
 	const config = await loadConfig();
 	cache = new VersionCache(config.cache.ttlMinutes);
 
-	// DEBUG: Log plugin initialization via structured logging
-	await client.app.log({
-		service: "version-guard",
-		level: "debug",
-		message: `Plugin loaded, config: ${JSON.stringify(config)}`,
-	});
+	// Note: Don't call client.app.log() during plugin init - only in hooks
 
 	return {
 		"tool.execute.after": async (input, _output) => {
@@ -33,13 +28,6 @@ export const VersionGuard: Plugin = async ({ client }) => {
 			const toolName = String(
 				getNestedProp(input, "tool") ?? getNestedProp(input, "name") ?? "",
 			).toLowerCase();
-
-			// DEBUG: Log every tool execution
-			await client.app.log({
-				service: "version-guard",
-				level: "debug",
-				message: `tool.execute.after: ${toolName}`,
-			});
 
 			// Only check write/edit operations
 			if (toolName !== "edit" && toolName !== "write") return;
