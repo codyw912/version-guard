@@ -12,7 +12,8 @@
 	},
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target node",
-		"dev": "bun build ./src/index.ts --outdir ./dist --target node --watch"
+		"dev": "bun build ./src/index.ts --outdir ./dist --target node --watch",
+		"test": "bun test"
 	},
 	"dependencies": {
 		"@version-guard/core": "workspace:*"

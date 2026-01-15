@@ -7,7 +7,7 @@ import { loadConfig, shouldCheck } from "./config";
 let cache: VersionCache | null = null;
 
 // Helper to safely extract nested properties
-function getNestedProp(obj: unknown, ...keys: string[]): unknown {
+export function getNestedProp(obj: unknown, ...keys: string[]): unknown {
 	let current = obj;
 	for (const key of keys) {
 		if (current == null || typeof current !== "object") return undefined;
